@@ -2,6 +2,7 @@
 
 import os
 import argparse
+import random
 import fpdf
 
 VERSION = '1.0'
@@ -21,6 +22,7 @@ def add_image(pdf, image_path, x=None, y=None):
     #pdf.ln(85)  # move 85 down
     #pdf.cell(200, 10, txt="{}".format(image_path), ln=1)
 
+
 def parse_command_line():
     parser = argparse.ArgumentParser(description=main.__doc__, prog='mixim')
     parser.add_argument('files', nargs='+', help='source image files or directories containing source image files')
@@ -30,11 +32,11 @@ def parse_command_line():
     parser.add_argument('-v', '--verbose', action='store_true', help='be more verbose')
     parser.add_argument('-o', '--output', help='name of the generated PDF', default='output.pdf')
     parser.add_argument('-f', '--format', help='format (A4 or A3)')
-    parser.add_argument('-t', '--target', help='target image ')
-    parser.add_argument('--img-num', help='number of images')
-    parser.add_argument('--page-num', help='number of pages')
-    parser.add_argument('--type', help='TODO (1 item, 2 in a row, ...)')
-    parser.add_argument('-r', '--ratio', help='ratio (%%) of target items')
+    parser.add_argument('--images-per-page', type=int, help='number of images per page', default=36)
+    parser.add_argument('--pages', type=int, help='number of pages', default=1)
+    parser.add_argument('--target-ratio', type=int, help='ratio (%%) of occurrence of the target image', default=20)
+    parser.add_argument('--orientation', choices=['Landscape', 'Portrait'], help='Landscape or Portrait', default='Portrait')
+    parser.add_argument('--page-format', choices=['A3', 'A4'], help='A3 or A4', default='A4')
 
     args = parser.parse_args()
     return args
@@ -57,11 +59,18 @@ LEFT_MARGIN = 10
 TOP_MARGIN = 10
 TOP_MARGIN_IMGS = 50
 
-def generate_pdf(src_files, out_file):
 
-    pdf = fpdf.FPDF()
-    pdf.add_page(orientation='Portrait') #, format='A4')
-    
+def init_pdf(orientation, page_format):
+    pdf = fpdf.FPDF(orientation=orientation, format=page_format)
+    return pdf
+
+
+def set_target_img(pdf, img):
+    pdf.image(img, x=100, y=TOP_MARGIN, w=30, h=30)
+
+
+def generate_page(pdf, src_files):
+
     # diaply on a grid 30x30 mmm2
     x0 = LEFT_MARGIN
     y0 = TOP_MARGIN_IMGS
@@ -76,7 +85,43 @@ def generate_pdf(src_files, out_file):
             if y > 270:
                 log('y=%d too high to fit in page' % y)
 
-    pdf.output(out_file)
+
+
+def chose_target_item(file_set):
+    files = list(file_set)
+    return random.choice(files)
+
+
+def compute_random_list(item_set, size, target_item, target_ratio):
+    """Create a list of given size, where the target item is present with the given ratio (%)
+    """
+
+    if len(item_set) <= 1:
+        raise Exception('len(item_set) <= 1')
+
+    items = list(item_set)
+
+    # First initialize the result with the number of target items
+    n_target_item = size * target_ratio // 100
+    if n_target_item == 0: n_target_item = 1
+    if n_target_item > 100: n_target_item = 100
+    result = [ target_item ] * n_target_item
+
+    # Now complete the list with the other items
+    while len(result) < size:
+        random_item = random.choice(items)
+        if random_item == target_item: continue # do not take this one
+        result.append(random_item)
+
+    random.shuffle(result)
+
+    return result
+
+
+def compute_img_size(files, page_format, args.images_per_page, args.orientation):
+    """Compute the size that must have the images to fit in the given page size
+    """
+    pass
 
 
 def main():
@@ -84,18 +129,20 @@ def main():
     args = parse_command_line()
 
     src_files = get_src_files(args.files)
-    src_files = list(src_files)
-    src_files += src_files
-    src_files += src_files
-    src_files += src_files
-    log('src_files=', src_files)
 
-    # compute the random list of source images
+    pdf = init_pdf(args.orientation, args.page_format)
+    for page in range(args.pages):
+        log('page %d' % page)
+        pdf.add_page()
+        target_img = chose_target_item(src_files)
+        set_target_img(pdf, target_img)
+        files = compute_random_list(src_files, args.images_per_page, target_img, args.target_ratio)
 
-    # compute unified size
+        img_size = compute_img_size(files)
 
-    generate_pdf(src_files, args.output)
+        generate_page(pdf, files)
 
+    pdf.output(args.output)
 
  
 if __name__ == '__main__':
