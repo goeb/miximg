@@ -1,0 +1,102 @@
+#! /usr/bin/env python3
+
+import os
+import argparse
+import fpdf
+
+VERSION = '1.0'
+ 
+def log(*args):
+    msg = ''
+    for arg in args:
+        if len(msg) != 0: msg += ' '
+        msg += '%s' % (arg)
+    print(msg)
+
+
+
+def add_image(pdf, image_path, x=None, y=None):
+    pdf.image(image_path, x=x, y=y, w=30)
+    #pdf.set_font("Arial", size=12)
+    #pdf.ln(85)  # move 85 down
+    #pdf.cell(200, 10, txt="{}".format(image_path), ln=1)
+
+def parse_command_line():
+    parser = argparse.ArgumentParser(description=main.__doc__, prog='mixim')
+    parser.add_argument('files', nargs='+', help='source image files or directories containing source image files')
+    parser.add_argument('-V', '--version',
+                        help='print version and exit', action='version',
+                        version='%(prog)s ' + VERSION)
+    parser.add_argument('-v', '--verbose', action='store_true', help='be more verbose')
+    parser.add_argument('-o', '--output', help='name of the generated PDF', default='output.pdf')
+    parser.add_argument('-f', '--format', help='format (A4 or A3)')
+    parser.add_argument('-t', '--target', help='target image ')
+    parser.add_argument('--img-num', help='number of images')
+    parser.add_argument('--page-num', help='number of pages')
+    parser.add_argument('--type', help='TODO (1 item, 2 in a row, ...)')
+    parser.add_argument('-r', '--ratio', help='ratio (%%) of target items')
+
+    args = parser.parse_args()
+    return args
+
+
+def get_src_files(items):
+    result = []
+    for item in items:
+        if os.path.isdir(item):
+            for r, d, f in os.walk(item):
+                subfiles = [os.path.join(r, subf) for subf in f]
+                result += subfiles
+        else:
+            result.append(item)
+
+    return set(result) # remove duplicates
+
+
+LEFT_MARGIN = 10
+TOP_MARGIN = 10
+TOP_MARGIN_IMGS = 50
+
+def generate_pdf(src_files, out_file):
+
+    pdf = fpdf.FPDF()
+    pdf.add_page(orientation='Portrait') #, format='A4')
+    
+    # diaply on a grid 30x30 mmm2
+    x0 = LEFT_MARGIN
+    y0 = TOP_MARGIN_IMGS
+    x = x0
+    y = y0
+    for f in src_files:
+        pdf.image(f, x=x, y=y, w=30, h=30)
+        x += 30
+        if x > 170: # for portrait
+            x = x0
+            y += 30
+            if y > 270:
+                log('y=%d too high to fit in page' % y)
+
+    pdf.output(out_file)
+
+
+def main():
+
+    args = parse_command_line()
+
+    src_files = get_src_files(args.files)
+    src_files = list(src_files)
+    src_files += src_files
+    src_files += src_files
+    src_files += src_files
+    log('src_files=', src_files)
+
+    # compute the random list of source images
+
+    # compute unified size
+
+    generate_pdf(src_files, args.output)
+
+
+ 
+if __name__ == '__main__':
+    main()
