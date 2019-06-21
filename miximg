@@ -131,7 +131,6 @@ def set_text(pdf, text, page_orientation, page_format):
     pdf.set_y(MARGIN_TOP)
     page_width, page_height = PAGE_SIZES_MM[page_format][page_orientation]
     text_box_width = (page_width - MARGIN_LEFT - MARGIN_RIGHT) / 2 - MARGIN_LEFT
-    log('text=', text)
     pdf.multi_cell(text_box_width, 10, txt=text, align='L')
 
 
@@ -229,7 +228,6 @@ def compute_img_size(images, images_per_page, page_format, page_orientation):
     w_ref, h_ref = 0, 0
     for img in images:
         w, h = img.aspect_ratio
-        #log('aspect_ratio: %f, %f' % (w, h))
         if w > w_ref: w_ref = w
         if h > h_ref: h_ref = h
 
@@ -238,10 +236,8 @@ def compute_img_size(images, images_per_page, page_format, page_orientation):
     page_width, page_height = PAGE_SIZES_MM[page_format][page_orientation]
     image_box_width = page_width - MARGIN_RIGHT - MARGIN_LEFT
     image_box_height = page_height - MARGIN_BOTTOM - MARGIN_IMGS_TOP
-    log('image_box_width=', image_box_width, ', image_box_height=', image_box_height)
     img_box_surface = image_box_width * image_box_height
     one_img_surface = img_box_surface / images_per_page
-    log('images_per_page=', images_per_page)
     one_img_w = math.sqrt(one_img_surface * img_aspect_ratio) - PADDING_IMG_X
     one_img_h = math.sqrt(one_img_surface / img_aspect_ratio) - PADDING_IMG_Y
 
@@ -249,7 +245,6 @@ def compute_img_size(images, images_per_page, page_format, page_orientation):
     one_img_w *= 0.85
     one_img_h *= 0.85
 
-    log('one_img_w=', one_img_w, ', one_img_h=', one_img_h)
     n_horizontal = image_box_width // (one_img_w + PADDING_IMG_X)
 
     return one_img_w, one_img_h, n_horizontal
@@ -272,7 +267,6 @@ def main():
 
     pdf = init_pdf(args.orientation, args.page_format)
     for page in range(args.pages):
-        log('page %d' % page)
         pdf.add_page()
         target_img = chose_target_item(src_files)
         files = compute_random_list(src_files, args.images_per_page, target_img, args.target_ratio)
