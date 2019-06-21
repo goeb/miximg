@@ -12,7 +12,7 @@ VERSION = '1.0'
 # page layout
 # +---------------------------------+
 # |  .............................  |
-# |                                 |
+# |   text...  [target image]       |
 # |                                 |
 # |       H E A D E R               |
 # |                                 |
@@ -30,11 +30,13 @@ VERSION = '1.0'
 # |                                 |
 # +---------------------------------+
 
+# Size unit is millimeter
 MARGIN_LEFT = 10
 MARGIN_RIGHT = MARGIN_LEFT
 MARGIN_TOP = 10
 MARGIN_BOTTOM = MARGIN_TOP
 HEADER_HEIGHT = 60
+HEADER_TARGET_X = 100
 MARGIN_IMGS_TOP = MARGIN_TOP + HEADER_HEIGHT
 PAGE_FORMAT_PORTRAIT = 'portrait'
 PAGE_FORMAT_LANDSCAPE = 'landscape'
@@ -43,6 +45,7 @@ PAGE_SIZES_MM = { 'A4': { PAGE_FORMAT_PORTRAIT: (210, 297),
                   'A3': { PAGE_FORMAT_PORTRAIT: (297, 420),
                           PAGE_FORMAT_LANDSCAPE: (420, 297) }
                  }
+# Separation space between images
 PADDING_IMG_Y = 10
 PADDING_IMG_X = 10
 
@@ -78,6 +81,7 @@ def parse_command_line():
     parser.add_argument('--orientation', choices=[PAGE_FORMAT_PORTRAIT, PAGE_FORMAT_LANDSCAPE],
                         help='Orientation of the page (portrait or landscape)', default=PAGE_FORMAT_PORTRAIT)
     parser.add_argument('--page-format', choices=['A3', 'A4'], help='Page format (A3 or A4)', default='A4')
+    parser.add_argument('--text', help='Header text', default='')
 
     args = parser.parse_args()
     return args
@@ -97,12 +101,38 @@ def get_src_files(items):
 
 
 def init_pdf(orientation, page_format):
-    pdf = fpdf.FPDF(orientation=orientation, format=page_format)
+    pdf = fpdf.FPDF(orientation=orientation, unit='mm', format=page_format)
+    pdf.set_font('Arial', size=18)
     return pdf
 
 
-def set_target_img(pdf, img):
-    pdf.image(img, x=100, y=MARGIN_TOP, h=HEADER_HEIGHT*0.80)
+def set_target_img(pdf, img, page_orientation, page_format):
+    """Print the target image in the header
+    """
+    page_width, page_height = PAGE_SIZES_MM[page_format][page_orientation]
+    x = page_width / 2
+    max_box_width = page_width / 2 - MARGIN_RIGHT
+    # set the size of the box in which will be displayed the image
+    i = Image(img)
+    w, h = i.aspect_ratio
+    h_box = HEADER_HEIGHT*0.80
+    w_box = h_box / h
+    if w_box > max_box_width:
+        # set the width
+        pdf.image(img, x=x, y=MARGIN_TOP, w=max_box_width)
+    else:
+        pdf.image(img, x=x, y=MARGIN_TOP, h=h_box)
+
+
+def set_text(pdf, text, page_orientation, page_format):
+    """Print the text in the header
+    """
+    pdf.set_x(MARGIN_LEFT)
+    pdf.set_y(MARGIN_TOP)
+    page_width, page_height = PAGE_SIZES_MM[page_format][page_orientation]
+    text_box_width = (page_width - MARGIN_LEFT - MARGIN_RIGHT) / 2 - MARGIN_LEFT
+    log('text=', text)
+    pdf.multi_cell(text_box_width, 10, txt=text, align='L')
 
 
 def generate_page(pdf, imgs, one_img_w, one_img_h, n_horizontal):
@@ -252,7 +282,8 @@ def main():
         one_img_w, one_img_h, n_horizontal = compute_img_size(imgs, args.images_per_page,
                                                               args.page_format, args.orientation)
 
-        set_target_img(pdf, target_img)
+        set_target_img(pdf, target_img, args.orientation, args.page_format)
+        set_text(pdf, args.text, args.orientation, args.page_format)
         generate_page(pdf, imgs, one_img_w, one_img_h, n_horizontal)
 
     pdf.output(args.output)
