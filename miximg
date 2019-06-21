@@ -82,6 +82,7 @@ def parse_command_line():
                         help='Orientation of the page (portrait or landscape)', default=PAGE_FORMAT_PORTRAIT)
     parser.add_argument('--page-format', choices=['A3', 'A4'], help='Page format (A3 or A4)', default='A4')
     parser.add_argument('--text', help='Header text', default='')
+    parser.add_argument('--target', help='Select a target (if no target specified, then the target is a random')
 
     args = parser.parse_args()
     return args
@@ -267,8 +268,14 @@ def main():
 
     pdf = init_pdf(args.orientation, args.page_format)
     for page in range(args.pages):
+
         pdf.add_page()
-        target_img = chose_target_item(src_files)
+
+        if args.target:
+            target_img = args.target
+        else:
+            target_img = chose_target_item(src_files)
+
         files = compute_random_list(src_files, args.images_per_page, target_img, args.target_ratio)
 
         imgs = convert_to_objects(files)
