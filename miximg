@@ -1,6 +1,7 @@
 #! /usr/bin/env python3
 
 import os
+import sys
 import argparse
 import random
 import fpdf
@@ -12,7 +13,7 @@ VERSION = '1.0'
 # page layout
 # +---------------------------------+
 # |  .............................  |
-# |   text...  [target image]       |
+# |   text...     [target image]    |
 # |                                 |
 # |       H E A D E R               |
 # |                                 |
@@ -70,19 +71,20 @@ def parse_command_line():
     parser = argparse.ArgumentParser(description=main.__doc__, prog='miximg')
     parser.add_argument('files', nargs='+', help='source image files or directories containing source image files')
     parser.add_argument('-V', '--version',
-                        help='print version and exit', action='version',
+                        help='Print version and exit', action='version',
                         version='%(prog)s ' + VERSION)
-    parser.add_argument('-v', '--verbose', action='store_true', help='be more verbose')
-    parser.add_argument('-o', '--output', help='name of the generated PDF', default='output.pdf')
-    parser.add_argument('-f', '--format', help='format (A4 or A3)')
-    parser.add_argument('--images-per-page', type=int, help='number of images per page', default=36)
-    parser.add_argument('--pages', type=int, help='number of pages', default=1)
-    parser.add_argument('--target-ratio', type=int, help='ratio (%%) of occurrence of the target image', default=20)
+    parser.add_argument('-v', '--verbose', action='store_true', help='Be more verbose')
+    parser.add_argument('-o', '--output', help='Name of the generated PDF', default='output.pdf')
+    parser.add_argument('-f', '--format', help='Page format (A4 or A3)')
+    parser.add_argument('--images-per-page', type=int, help='Number of images per page', default=36)
+    parser.add_argument('--pages', type=int, help='Number of pages', default=1)
+    parser.add_argument('--target-ratio', type=int, help='Ratio (%%) of occurrence of the target image', default=20)
     parser.add_argument('--orientation', choices=[PAGE_FORMAT_PORTRAIT, PAGE_FORMAT_LANDSCAPE],
                         help='Orientation of the page (portrait or landscape)', default=PAGE_FORMAT_PORTRAIT)
     parser.add_argument('--page-format', choices=['A3', 'A4'], help='Page format (A3 or A4)', default='A4')
     parser.add_argument('--text', help='Header text', default='')
     parser.add_argument('--target', help='Select a target (if no target specified, then the target is a random')
+    parser.add_argument('--layout', choices=['grid', 'random'], help='Layout of the images', default='grid')
 
     args = parser.parse_args()
     return args
@@ -135,8 +137,9 @@ def set_text(pdf, text, page_orientation, page_format):
     pdf.multi_cell(text_box_width, 10, txt=text, align='L')
 
 
-def generate_page(pdf, imgs, one_img_w, one_img_h, n_horizontal):
-
+def generate_grid(pdf, imgs, one_img_w, one_img_h, n_horizontal):
+    """Place the images on a grid
+    """
     # display on a grid
     x0 = MARGIN_LEFT
     y0 = MARGIN_IMGS_TOP
@@ -160,6 +163,73 @@ def generate_page(pdf, imgs, one_img_w, one_img_h, n_horizontal):
             count_on_line = 0
         else:
             x += one_img_w + PADDING_IMG_X
+
+
+def is_in_box(x0, y0, w0, h0, x, y):
+    if x0 <= x <= x0+w0:
+        if y0 <= y <= y0+h0:
+            return True
+    return False
+
+
+def check_img_conflict(already_placed, one_img_w, one_img_h, x, y):
+    """Check if an image at (x, y) is in touch with already placed images)
+    """
+    for x0, y0 in already_placed:
+        # check if at least one edge of the rectabgle is in the already placed rectangle
+        if is_in_box(x0, y0, one_img_w, one_img_h, x, y): return True
+        if is_in_box(x0, y0, one_img_w, one_img_h, x+one_img_w, y): return True
+        if is_in_box(x0, y0, one_img_w, one_img_h, x+one_img_w, y+one_img_h): return True
+        if is_in_box(x0, y0, one_img_w, one_img_h, x, y+one_img_h): return True
+
+    return False
+
+
+def generate_random(pdf, imgs, one_img_w, one_img_h, page_format, page_orientation):
+    """Place the images randomly
+    """
+    already_placed = []
+    img_box_w, img_box_h = get_image_box_size(page_format, page_orientation)
+
+    # The retry counter is a way to prevent an infinite loop
+    # if the arrangement of already placed images does not let enough space
+    # for remaining images (or if the random sequence is very unlucky).
+    # A test with retry_counter=100 shows that sometimes it succeeds, and sometimes
+    # it fails.
+    # I choose the empirical value 10000, that should be enough for most cases.
+    retry_counter = 10000
+
+    # Reduce the size slightly
+    one_img_w /= 1.2
+    one_img_h /= 1.2
+
+    while len(imgs):
+
+        x = random.uniform(0, img_box_w - one_img_w)
+        y = random.uniform(0, img_box_h - one_img_h)
+        # make some rounding to reduce the possibilities of placement
+        x = int(x/4)*4
+        y = int(y/4)*4
+        # translate into the final box
+        x += MARGIN_LEFT
+        y += MARGIN_IMGS_TOP
+        # check if this place is in conflict with an aleady placed image
+        is_conflict = check_img_conflict(already_placed, one_img_w*1.2, one_img_h*1.2, x, y)
+        if is_conflict:
+            # retry another random placement
+            retry_counter -= 1
+            if retry_counter <= 0:
+                log('Infinite loop in random placement. Abort')
+                sys.exit(1)
+
+            continue
+
+        # ok, the place is clear, set the image here
+        already_placed.append((x, y))
+        img = imgs.pop(0)
+        w, h = img.aspect_ratio
+        if w == 1: pdf.image(img.filename, x=x, y=y, w=one_img_w) # fix the width
+        else:      pdf.image(img.filename, x=x, y=y, h=one_img_h) # fix the height
 
 
 def chose_target_item(file_set):
@@ -218,6 +288,15 @@ class Image:
         self.aspect_ratio = get_aspect_ratio(filename)
 
 
+def get_image_box_size(page_format, page_orientation):
+    """Get the width an height of the area of the images
+    """
+    page_width, page_height = PAGE_SIZES_MM[page_format][page_orientation]
+    image_box_width = page_width - MARGIN_RIGHT - MARGIN_LEFT
+    image_box_height = page_height - MARGIN_BOTTOM - MARGIN_IMGS_TOP
+    return image_box_width, image_box_height
+
+
 def compute_img_size(images, images_per_page, page_format, page_orientation):
     """Compute the size that must have the images to fit in the given page size
 
@@ -234,9 +313,7 @@ def compute_img_size(images, images_per_page, page_format, page_orientation):
 
     img_aspect_ratio = w_ref / h_ref
     # now compute the max size
-    page_width, page_height = PAGE_SIZES_MM[page_format][page_orientation]
-    image_box_width = page_width - MARGIN_RIGHT - MARGIN_LEFT
-    image_box_height = page_height - MARGIN_BOTTOM - MARGIN_IMGS_TOP
+    image_box_width, image_box_height = get_image_box_size(page_format, page_orientation)
     img_box_surface = image_box_width * image_box_height
     one_img_surface = img_box_surface / images_per_page
     one_img_w = math.sqrt(one_img_surface * img_aspect_ratio) - PADDING_IMG_X
@@ -285,7 +362,11 @@ def main():
 
         set_target_img(pdf, target_img, args.orientation, args.page_format)
         set_text(pdf, args.text, args.orientation, args.page_format)
-        generate_page(pdf, imgs, one_img_w, one_img_h, n_horizontal)
+
+        if args.layout == 'grid':
+            generate_grid(pdf, imgs, one_img_w, one_img_h, n_horizontal)
+        else:
+            generate_random(pdf, imgs, one_img_w, one_img_h, args.page_format, args.orientation)
 
     pdf.output(args.output)
 
