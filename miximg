@@ -67,7 +67,7 @@ def add_image(pdf, image_path, x=None, y=None):
 
 
 def parse_command_line():
-    parser = argparse.ArgumentParser(description=main.__doc__, prog='mixim')
+    parser = argparse.ArgumentParser(description=main.__doc__, prog='miximg')
     parser.add_argument('files', nargs='+', help='source image files or directories containing source image files')
     parser.add_argument('-V', '--version',
                         help='print version and exit', action='version',
