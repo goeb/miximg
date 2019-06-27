@@ -41,7 +41,7 @@ HEIGHT_TEXT = 20
 OFFSET_Y_TARGET_IMG = MARGIN_TOP + HEIGHT_TEXT
 HEIGHT_TARGET_IMG = 40
 HEIGHT_HEADER = HEIGHT_TEXT + HEIGHT_TARGET_IMG
-MARGIN_IMGS_TOP = MARGIN_TOP + HEIGHT_HEADER
+MARGIN_IMGS_TOP = MARGIN_TOP + HEIGHT_HEADER + 10
 PAGE_FORMAT_PORTRAIT = 'portrait'
 PAGE_FORMAT_LANDSCAPE = 'landscape'
 PAGE_SIZES_MM = { 'A4': { PAGE_FORMAT_PORTRAIT: (210, 297),
@@ -166,7 +166,9 @@ def generate_grid(pdf, imgs, one_img_w, one_img_h, n_horizontal, page_format, pa
                 pdf.image(img.filename, x=x, y=y, w=one_img_w)
             else:
                 # fix the height
-                pdf.image(img.filename, x=x, y=y, h=one_img_h)
+                # center the image horizontally in its box
+                x_centered = x + (one_img_w - w*one_img_w)/2
+                pdf.image(img.filename, x=x_centered, y=y, h=one_img_h)
 
             x += one_img_w + PADDING_IMG_X
 
