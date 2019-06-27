@@ -13,9 +13,8 @@ VERSION = '1.0'
 # page layout
 # +---------------------------------+
 # |  .............................  |
-# |   text...     [target image]    |
-# |                                 |
-# |       H E A D E R               |
+# |   text...                       |
+# |        [target image]           |
 # |                                 |
 # |                                 |
 # |  .............................  |
@@ -36,9 +35,13 @@ MARGIN_LEFT = 10
 MARGIN_RIGHT = MARGIN_LEFT
 MARGIN_TOP = 10
 MARGIN_BOTTOM = MARGIN_TOP
-HEADER_HEIGHT = 60
 HEADER_TARGET_X = 100
-MARGIN_IMGS_TOP = MARGIN_TOP + HEADER_HEIGHT
+OFFSET_Y_TEXT = MARGIN_TOP
+HEIGHT_TEXT = 20
+OFFSET_Y_TARGET_IMG = MARGIN_TOP + HEIGHT_TEXT
+HEIGHT_TARGET_IMG = 40
+HEIGHT_HEADER = HEIGHT_TEXT + HEIGHT_TARGET_IMG
+MARGIN_IMGS_TOP = MARGIN_TOP + HEIGHT_HEADER
 PAGE_FORMAT_PORTRAIT = 'portrait'
 PAGE_FORMAT_LANDSCAPE = 'landscape'
 PAGE_SIZES_MM = { 'A4': { PAGE_FORMAT_PORTRAIT: (210, 297),
@@ -105,7 +108,7 @@ def get_src_files(items):
 
 def init_pdf(orientation, page_format):
     pdf = fpdf.FPDF(orientation=orientation, unit='mm', format=page_format)
-    pdf.set_font('Arial', size=18)
+    pdf.set_font('Arial', size=HEIGHT_TEXT)
     return pdf
 
 
@@ -113,18 +116,18 @@ def set_target_img(pdf, img, page_orientation, page_format):
     """Print the target image in the header
     """
     page_width, page_height = PAGE_SIZES_MM[page_format][page_orientation]
-    x = page_width / 2
-    max_box_width = page_width / 2 - MARGIN_RIGHT
+    max_box_width = page_width / 2
     # set the size of the box in which will be displayed the image
     i = Image(img)
     w, h = i.aspect_ratio
-    h_box = HEADER_HEIGHT*0.80
+    h_box = HEIGHT_TARGET_IMG
     w_box = h_box / h
+    x = page_width / 2 - w_box / 2
     if w_box > max_box_width:
         # set the width
-        pdf.image(img, x=x, y=MARGIN_TOP, w=max_box_width)
+        pdf.image(img, x=x, y=OFFSET_Y_TARGET_IMG, w=max_box_width)
     else:
-        pdf.image(img, x=x, y=MARGIN_TOP, h=h_box)
+        pdf.image(img, x=x, y=OFFSET_Y_TARGET_IMG, h=h_box)
 
 
 def set_text(pdf, text, page_orientation, page_format):
@@ -133,8 +136,8 @@ def set_text(pdf, text, page_orientation, page_format):
     pdf.set_x(MARGIN_LEFT)
     pdf.set_y(MARGIN_TOP)
     page_width, page_height = PAGE_SIZES_MM[page_format][page_orientation]
-    text_box_width = (page_width - MARGIN_LEFT - MARGIN_RIGHT) / 2 - MARGIN_LEFT
-    pdf.multi_cell(text_box_width, 10, txt=text, align='L')
+    text_box_width = page_width - MARGIN_LEFT - MARGIN_RIGHT
+    pdf.multi_cell(text_box_width, HEIGHT_TEXT, txt=text, align='L')
 
 
 def generate_grid(pdf, imgs, one_img_w, one_img_h, n_horizontal):
