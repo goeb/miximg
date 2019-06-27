@@ -62,14 +62,6 @@ def log(*args):
     print(msg)
 
 
-
-def add_image(pdf, image_path, x=None, y=None):
-    pdf.image(image_path, x=x, y=y, w=30)
-    #pdf.set_font("Arial", size=12)
-    #pdf.ln(85)  # move 85 down
-    #pdf.cell(200, 10, txt="{}".format(image_path), ln=1)
-
-
 def parse_command_line():
     parser = argparse.ArgumentParser(description=main.__doc__, prog='miximg')
     parser.add_argument('files', nargs='+', help='source image files or directories containing source image files')
@@ -78,7 +70,7 @@ def parse_command_line():
                         version='%(prog)s ' + VERSION)
     parser.add_argument('-v', '--verbose', action='store_true', help='Be more verbose')
     parser.add_argument('-o', '--output', help='Name of the generated PDF', default='output.pdf')
-    parser.add_argument('-f', '--format', help='Page format (A4 or A3)')
+    parser.add_argument('-f', '--format', help='Page format (A4 or A3)', default='A4')
     parser.add_argument('--images-per-page', type=int, help='Number of images per page', default=36)
     parser.add_argument('--pages', type=int, help='Number of pages', default=1)
     parser.add_argument('--target-ratio', type=int, help='Ratio (%%) of occurrence of the target image', default=20)
