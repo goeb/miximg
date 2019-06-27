@@ -64,21 +64,21 @@ def log(*args):
 
 def parse_command_line():
     parser = argparse.ArgumentParser(description=main.__doc__, prog='miximg')
-    parser.add_argument('files', nargs='+', help='source image files or directories containing source image files')
+    parser.add_argument('files', nargs='+', help='source image files or directories')
+    parser.add_argument('--images-per-page', type=int, help='Number of images per page', default=36)
+    parser.add_argument('--layout', choices=['grid', 'random'], help='Layout of the images', default='grid')
+    parser.add_argument('-o', '--output', help='Name of the generated PDF', default='output.pdf')
+    parser.add_argument('--pages', type=int, help='Number of pages', default=1)
+    parser.add_argument('--page-format', choices=['A3', 'A4'], help='Page format (A3 or A4)', default='A4')
+    parser.add_argument('--page-orientation', choices=[PAGE_FORMAT_PORTRAIT, PAGE_FORMAT_LANDSCAPE],
+                        help='Orientation of the page (portrait or landscape)', default=PAGE_FORMAT_PORTRAIT)
+    parser.add_argument('--target', help='Select a target (by default take a random)')
+    parser.add_argument('--target-ratio', type=int, help='Ratio (%%) of occurrence of the target image', default=20)
+    parser.add_argument('--text', help='Header text', default='')
+    parser.add_argument('-v', '--verbose', action='store_true', help='Be more verbose')
     parser.add_argument('-V', '--version',
                         help='Print version and exit', action='version',
                         version='%(prog)s ' + VERSION)
-    parser.add_argument('-v', '--verbose', action='store_true', help='Be more verbose')
-    parser.add_argument('-o', '--output', help='Name of the generated PDF', default='output.pdf')
-    parser.add_argument('--images-per-page', type=int, help='Number of images per page', default=36)
-    parser.add_argument('--pages', type=int, help='Number of pages', default=1)
-    parser.add_argument('--target-ratio', type=int, help='Ratio (%%) of occurrence of the target image', default=20)
-    parser.add_argument('--orientation', choices=[PAGE_FORMAT_PORTRAIT, PAGE_FORMAT_LANDSCAPE],
-                        help='Orientation of the page (portrait or landscape)', default=PAGE_FORMAT_PORTRAIT)
-    parser.add_argument('--page-format', choices=['A3', 'A4'], help='Page format (A3 or A4)', default='A4')
-    parser.add_argument('--text', help='Header text', default='')
-    parser.add_argument('--target', help='Select a target (if no target specified, then the target is a random')
-    parser.add_argument('--layout', choices=['grid', 'random'], help='Layout of the images', default='grid')
 
     args = parser.parse_args()
     return args
@@ -349,7 +349,7 @@ def main():
 
     src_files = get_src_files(args.files)
 
-    pdf = init_pdf(args.orientation, args.page_format)
+    pdf = init_pdf(args.page_orientation, args.page_format)
     for page in range(args.pages):
 
         pdf.add_page()
@@ -364,15 +364,15 @@ def main():
         imgs = convert_to_objects(files)
 
         one_img_w, one_img_h, n_horizontal = compute_img_size(imgs, args.images_per_page,
-                                                              args.page_format, args.orientation)
+                                                              args.page_format, args.page_orientation)
 
-        set_target_img(pdf, target_img, args.orientation, args.page_format)
-        set_text(pdf, args.text, args.orientation, args.page_format)
+        set_target_img(pdf, target_img, args.page_orientation, args.page_format)
+        set_text(pdf, args.text, args.page_orientation, args.page_format)
 
         if args.layout == 'grid':
-            generate_grid(pdf, imgs, one_img_w, one_img_h, n_horizontal, args.page_format, args.orientation)
+            generate_grid(pdf, imgs, one_img_w, one_img_h, n_horizontal, args.page_format, args.page_orientation)
         else:
-            generate_random(pdf, imgs, one_img_w, one_img_h, args.page_format, args.orientation)
+            generate_random(pdf, imgs, one_img_w, one_img_h, args.page_format, args.page_orientation)
 
     pdf.output(args.output)
 
