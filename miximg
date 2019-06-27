@@ -70,7 +70,6 @@ def parse_command_line():
                         version='%(prog)s ' + VERSION)
     parser.add_argument('-v', '--verbose', action='store_true', help='Be more verbose')
     parser.add_argument('-o', '--output', help='Name of the generated PDF', default='output.pdf')
-    parser.add_argument('-f', '--format', help='Page format (A4 or A3)', default='A4')
     parser.add_argument('--images-per-page', type=int, help='Number of images per page', default=36)
     parser.add_argument('--pages', type=int, help='Number of pages', default=1)
     parser.add_argument('--target-ratio', type=int, help='Ratio (%%) of occurrence of the target image', default=20)
