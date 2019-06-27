@@ -140,32 +140,39 @@ def set_text(pdf, text, page_orientation, page_format):
     pdf.multi_cell(text_box_width, HEIGHT_TEXT, txt=text, align='L')
 
 
-def generate_grid(pdf, imgs, one_img_w, one_img_h, n_horizontal):
+def generate_grid(pdf, imgs, one_img_w, one_img_h, n_horizontal, page_format, page_orientation):
     """Place the images on a grid
     """
     # display on a grid
     x0 = MARGIN_LEFT
     y0 = MARGIN_IMGS_TOP
-    x = x0
     y = y0
-    count_on_line = 0
-    for img in imgs:
-        w, h = img.aspect_ratio
-        if w == 1:
-            # fix the width
-            pdf.image(img.filename, x=x, y=y, w=one_img_w)
-        else:
-            # fix the height
-            pdf.image(img.filename, x=x, y=y, h=one_img_h)
+    page_width, page_height = PAGE_SIZES_MM[page_format][page_orientation]
 
-        count_on_line += 1
-        if count_on_line == n_horizontal:
-            # go to next line
-            y += one_img_h + PADDING_IMG_Y
-            x = x0
-            count_on_line = 0
-        else:
+    while len(imgs):
+        # take a whole line (n_horizontal items)
+        imgs_on_line = imgs[:n_horizontal]
+        imgs = imgs[n_horizontal:]
+        # compute width of line
+        w_line = one_img_w + (len(imgs_on_line)-1) * (one_img_w + PADDING_IMG_X)
+        # compute the x offset to center the images on the page
+        x_line = x0 + (page_width - MARGIN_LEFT - MARGIN_RIGHT - w_line)/2
+        x = x_line
+
+        for img in imgs_on_line:
+            w, h = img.aspect_ratio
+            if w == 1:
+                # fix the width
+                pdf.image(img.filename, x=x, y=y, w=one_img_w)
+            else:
+                # fix the height
+                pdf.image(img.filename, x=x, y=y, h=one_img_h)
+
             x += one_img_w + PADDING_IMG_X
+
+        # end of line
+        # go to next line
+        y += one_img_h + PADDING_IMG_Y
 
 
 def is_in_box(x0, y0, w0, h0, x, y):
@@ -326,7 +333,10 @@ def compute_img_size(images, images_per_page, page_format, page_orientation):
     one_img_w *= 0.85
     one_img_h *= 0.85
 
-    n_horizontal = image_box_width // (one_img_w + PADDING_IMG_X)
+    n_horizontal = image_box_width / (one_img_w + PADDING_IMG_X)
+    n_horizontal = int(n_horizontal)
+    if n_horizontal == 0:
+        raise Exception('n_horizontal is zero')
 
     return one_img_w, one_img_h, n_horizontal
 
@@ -367,7 +377,7 @@ def main():
         set_text(pdf, args.text, args.orientation, args.page_format)
 
         if args.layout == 'grid':
-            generate_grid(pdf, imgs, one_img_w, one_img_h, n_horizontal)
+            generate_grid(pdf, imgs, one_img_w, one_img_h, n_horizontal, args.page_format, args.orientation)
         else:
             generate_random(pdf, imgs, one_img_w, one_img_h, args.page_format, args.orientation)
 
