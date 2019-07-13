@@ -1,0 +1,95 @@
+#! /usr/bin/env python3
+
+import os
+import sys
+import tkinter as tk
+
+VERSION = '1.0'
+ 
+def create_choice(parent, label_text, selected, *values):
+    """Create a Frame with a label and an OptionMenu
+    """
+    frame = tk.Frame(parent)
+    label_text += ':'
+    label = tk.Label(frame, text=label_text)
+    label.pack(side='left')
+    default_value = tk.StringVar()
+    default_value.set(selected)
+    frame.option_menu = tk.OptionMenu(frame, default_value, *values)
+    frame.option_menu.pack(side='left')
+    return frame
+
+
+def validate_page_num(text):
+    try:
+        v = int(text)
+        if v <= 0: return False
+        return True
+    except:
+        return False
+
+
+def create_input(parent, label_text, validate_func):
+    """Create a Frame with a label and an OptionMenu
+    """
+    frame = tk.Frame(parent)
+    label_text += ':'
+    label = tk.Label(frame, text=label_text)
+    label.pack(side='left')
+    frame.entry = tk.Entry(frame)
+    frame.entry.pack(side='left')
+    if validate_func:
+        cmd = frame.entry.register(validate_func)
+        frame.entry.config(validate='key')
+        frame.entry.config(validatecommand=(cmd, '%P'))
+        
+    return frame
+
+
+class Application(tk.Frame):
+    def __init__(self, master=None):
+        super().__init__(master)
+        self.master = master
+        self.pack(fill=tk.BOTH)
+        self.create_widgets()
+
+
+    def create_widgets(self):
+        self.title = tk.Label(self, text="Miximgigui", font=("Helvetica","14"))
+        self.title.pack(side="top")
+
+        self.page_format = create_choice(self, 'Page format', 'portrait', 'portrait', 'landscape')
+        self.page_format.pack(side="top")
+
+        self.page_orientation = create_choice(self, 'Page orientation', 'A4', 'A4', 'A3')
+        self.page_orientation.pack(side="top")
+
+        self.num_pages = create_input(self, 'Number of pages', validate_page_num)
+        self.num_pages.pack(side='top')
+
+        self.validate = tk.Button(self)
+        self.validate["text"] = "Validate"
+        self.validate["command"] = self.validate
+        self.validate.pack(side="top")
+        
+        self.exit = tk.Button(self, text="Exit",
+                              command=self.exit)
+        self.exit.pack(side="bottom")
+        self.exit.bind('<Control-q>', self.exit)
+
+    def exit(self):
+        self.master.destroy()
+
+
+    def validate(self):
+        print("validate!")
+
+
+def main():
+    root = tk.Tk()
+    app = Application(master=root)
+    app.mainloop()
+
+
+if __name__ == '__main__':
+    main()
