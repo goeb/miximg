@@ -67,15 +67,22 @@ class Application(tk.Frame):
         self.num_pages = create_input(self, 'Number of pages', validate_page_num)
         self.num_pages.pack(side='top')
 
-        self.validate = tk.Button(self)
-        self.validate["text"] = "Validate"
-        self.validate["command"] = self.validate
-        self.validate.pack(side="top")
+        self.img_layout = create_choice(self, 'Image layout', 'grid', 'grid', 'random')
+        self.img_layout.pack(side="top")
+
+        self.img_layout = create_input(self, 'Text', None)
+        self.img_layout.pack(side="top")
+
+
+        # Buttons
+        self.frame_buttons = tk.Frame(self)
+        self.frame_buttons.pack()
+        self.validate = tk.Button(self.frame_buttons, text='Validate', command=self.validate)
+        self.validate.pack(side='left')
         
-        self.exit = tk.Button(self, text="Exit",
-                              command=self.exit)
-        self.exit.pack(side="bottom")
-        self.exit.bind('<Control-q>', self.exit)
+        self.exit = tk.Button(self.frame_buttons, text='Exit', command=self.exit)
+        self.exit.pack(side='left')
+        self.bind('<Control-q>', self.exit)
 
     def exit(self):
         self.master.destroy()
