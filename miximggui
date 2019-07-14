@@ -2,10 +2,32 @@
 
 import os
 import sys
+import locale
 import tkinter as tk
 
 VERSION = '1.0'
+
+# Internationalisation
+def _(text):
+    try:
+        lang = locale.getdefaultlocale()[0][0:2]
+        text = TEXT[lang][text]
+    except:
+        pass
+
+    return text
  
+TEXT = { 'fr':
+        {'Page format':'Format de page',
+         'Page orientation':'Orientation de la page',
+         'landscape':'paysage',
+         'Number of pages':'Nombre de pages',
+         'Image layout':'Placement des images',
+         'grid':'grille',
+         'random':'aléatoire',
+         '':''}
+       }
+
 def create_choice(parent, label_text, selected, *values):
     """Create a Frame with a label and an OptionMenu
     """
@@ -58,16 +80,18 @@ class Application(tk.Frame):
         self.title = tk.Label(self, text="Miximgigui", font=("Helvetica","14"))
         self.title.pack(side="top")
 
-        self.page_format = create_choice(self, 'Page format', 'portrait', 'portrait', 'landscape')
+        self.page_format = create_choice(self, _('Page format'), _('portrait'),
+                                         _('portrait'), _('landscape'))
         self.page_format.pack(side="top")
 
-        self.page_orientation = create_choice(self, 'Page orientation', 'A4', 'A4', 'A3')
+        self.page_orientation = create_choice(self, _('Page orientation'), 'A4', 'A4', 'A3')
         self.page_orientation.pack(side="top")
 
-        self.num_pages = create_input(self, 'Number of pages', validate_page_num)
+        self.num_pages = create_input(self, _('Number of pages'), validate_page_num)
         self.num_pages.pack(side='top')
 
-        self.img_layout = create_choice(self, 'Image layout', 'grid', 'grid', 'random')
+        self.img_layout = create_choice(self, _('Image layout'), _('grid'),
+                                       _('grid'), _('random'))
         self.img_layout.pack(side="top")
 
         self.img_layout = create_input(self, 'Text', None)
