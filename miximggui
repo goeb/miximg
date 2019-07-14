@@ -3,7 +3,9 @@
 import os
 import sys
 import locale
+import subprocess
 import tkinter as tk
+import tkinter.filedialog
 
 VERSION = '1.0'
 
@@ -25,6 +27,13 @@ TEXT = { 'fr':
          'Image layout':'Placement des images',
          'grid':'grille',
          'random':'aléatoire',
+         'Images per page':'Images par page',
+         'Image directory':'Répertoire d\'images',
+         'Target ratio (%)':'Ratio de la cible (%)',
+         'Instruction':'Consigne',
+         'Generate PDF':'Générer un PDF',
+         'Exit':'Quitter',
+         'cancelled':'annulé',
          '':''}
        }
 
@@ -35,11 +44,21 @@ def create_choice(parent, label_text, selected, *values):
     label_text += ':'
     label = tk.Label(frame, text=label_text)
     label.pack(side='left')
-    default_value = tk.StringVar()
-    default_value.set(selected)
-    frame.option_menu = tk.OptionMenu(frame, default_value, *values)
+    frame.value = tk.StringVar()
+    frame.value.set(selected)
+    frame.option_menu = tk.OptionMenu(frame, frame.value, *values)
     frame.option_menu.pack(side='left')
     return frame
+
+
+def validate_percent(text):
+    try:
+        v = int(text)
+        if v < 0: return False
+        if v > 100: return False
+        return True
+    except:
+        return False
 
 
 def validate_page_num(text):
@@ -80,12 +99,12 @@ class Application(tk.Frame):
         self.title = tk.Label(self, text="Miximgigui", font=("Helvetica","14"))
         self.title.pack(side="top")
 
-        self.page_format = create_choice(self, _('Page format'), _('portrait'),
-                                         _('portrait'), _('landscape'))
-        self.page_format.pack(side="top")
-
-        self.page_orientation = create_choice(self, _('Page orientation'), 'A4', 'A4', 'A3')
+        self.page_orientation = create_choice(self, _('Page orientation'), _('portrait'),
+                                              _('portrait'), _('landscape'))
         self.page_orientation.pack(side="top")
+
+        self.page_format = create_choice(self, _('Page format'), 'A4', 'A4', 'A3')
+        self.page_format.pack(side="top")
 
         self.num_pages = create_input(self, _('Number of pages'), validate_page_num)
         self.num_pages.pack(side='top')
@@ -94,26 +113,106 @@ class Application(tk.Frame):
                                        _('grid'), _('random'))
         self.img_layout.pack(side="top")
 
-        self.img_layout = create_input(self, 'Text', None)
-        self.img_layout.pack(side="top")
+        self.img_per_page = create_input(self, _('Images per page'), validate_page_num)
+        self.img_per_page.pack(side='top')
+
+        self.target_ratio = create_input(self, _('Target ratio (%)'), validate_percent)
+        self.target_ratio.pack(side='top')
+
+        self.target_img = create_input(self, _('Target image'), None)
+        self.target_img.entry.bind('<Button-1>', self.cb_choose_target_img)
+        self.target_img.pack(side='top')
+
+        self.src_img_dir = create_input(self, _('Image directory'), None)
+        self.src_img_dir.entry.bind('<Button-1>', self.cb_choose_img_src_dir)
+        self.src_img_dir.pack(side='top')
+
+        self.instruction = create_input(self, _('Instruction'), None)
+        self.instruction.pack(side="top")
 
 
         # Buttons
         self.frame_buttons = tk.Frame(self)
         self.frame_buttons.pack()
-        self.validate = tk.Button(self.frame_buttons, text='Validate', command=self.validate)
-        self.validate.pack(side='left')
+        self.button_gen_pdf = tk.Button(self.frame_buttons, text=_('Generate PDF'),
+                                        command=self.generate_pdf)
+        self.button_gen_pdf.pack(side='left')
         
-        self.exit = tk.Button(self.frame_buttons, text='Exit', command=self.exit)
-        self.exit.pack(side='left')
-        self.bind('<Control-q>', self.exit)
+        self.button_exit = tk.Button(self.frame_buttons, text=_('Exit'), command=self.exit)
+        self.button_exit.pack(side='left')
+        self.master.bind('<Control-q>', self.exit)
 
-    def exit(self):
+        # Messages
+        self.console = tk.Text(self)
+        self.console.pack(side="top")
+
+
+
+    def cb_choose_target_img(self, event):
+        filepath = tk.filedialog.askopenfilename()
+        if filepath:
+            # set the path in the widget
+            self.target_img.entry.delete(0, tk.END)
+            self.target_img.entry.insert(0, filepath)
+
+
+    def cb_choose_img_src_dir(self, event):
+        directory = tk.filedialog.askdirectory()
+        if directory:
+            # set the path in the widget
+            self.src_img_dir.entry.delete(0, tk.END)
+            self.src_img_dir.entry.insert(0, directory)
+
+
+    def exit(self, event=None):
         self.master.destroy()
 
 
-    def validate(self):
-        print("validate!")
+    def collect_miximg_args(self):
+        args = ['./miximg']
+        args.append('--images-per-page')
+        args.append(self.img_per_page.entry.get())
+        args.append('--page-format')
+        args.append(self.page_format.value.get())
+        args.append('--page-orientation')
+        args.append(self.page_orientation.value.get())
+        if self.num_pages.entry.get():
+            args.append('--pages')
+            args.append(self.num_pages.entry.get())
+        args.append('--layout')
+        args.append(self.img_layout.value.get())
+        if self.target_ratio.entry.get():
+            args.append('--target-ratio')
+            args.append(self.target_ratio.entry.get())
+        if self.target_img.entry.get():
+            args.append('--target')
+            args.append(self.target_img.entry.get())
+        if self.instruction.entry.get():
+            args.append('--text')
+            args.append(self.instruction.entry.get())
+
+        return args
+
+
+    def generate_pdf(self):
+        # ask for output file
+        output = tk.filedialog.askopenfilename()
+        if not output:
+            self.console.insert(tk.END, _('cancelled')+'\n')
+            return
+
+        # run the 'miximg' program
+        args = self.collect_miximg_args()
+        args.append('--output')
+        args.append(output)
+
+        self.console.insert(tk.END, ' '.join(args) + '\n')
+        self.console.update()
+
+        p = subprocess.run(args, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        # display the result in the console
+        self.console.insert(tk.END, p.stdout)
+        self.console.insert(tk.END, p.stderr)
 
 
 def main():
