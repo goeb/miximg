@@ -20,6 +20,17 @@ def _(text):
 
     return text
  
+TOOLTIP_TARGET_RATIO = 'Frequency of occurrence of the target image (between 0 and 100).'
+TOOLTIP_TARGET_IMG = 'Image to use as target. If omitted, then a random image shall be chosen.'
+TOOLTIP_IMG_DIR = 'Directory of images (supported formats: jpg, png).'
+TOOLTIP_INSTRUCTION = 'Text to be printed on the first line of each page.'
+
+# French tooltips
+TOOLTIP_TARGET_RATIO_fr = "Fréquence d'apparition de l'image cible parmi les autres (entre 0 et 100)."
+TOOLTIP_TARGET_IMG_fr = 'Image à utiliser comme cible. Si elle n\'est pas précisée, alors une image est tirée au hasard.'
+TOOLTIP_IMG_DIR_fr = 'Répertoire où se trouvent les images à utiliser (formats supportés: jpg, png).'
+TOOLTIP_INSTRUCTION_fr = 'Texte à afficher en tête de chaque page.'
+
 TEXT = { 'fr':
         {'Page format':'Format de page',
          'Page orientation':'Orientation de la page',
@@ -38,6 +49,10 @@ TEXT = { 'fr':
          'Choose a file name for the generated PDF':'Choisissez un nom de fichier pour le PDF',
          'ok':'ok',
          'error':'erreur',
+         TOOLTIP_TARGET_RATIO:TOOLTIP_TARGET_RATIO_fr,
+         TOOLTIP_TARGET_IMG:TOOLTIP_TARGET_IMG_fr,
+         TOOLTIP_IMG_DIR:TOOLTIP_IMG_DIR_fr,
+         TOOLTIP_INSTRUCTION:TOOLTIP_INSTRUCTION_fr,
          '':''}
        }
 
@@ -106,6 +121,59 @@ def create_input(parent, label_text, validate_func=None, size=5):
     return frame
 
 
+class CreateTooltip(object):
+    """Create a tooltip for a given widget
+    """
+    def __init__(self, widget, text):
+        self.showup_delay = 500     # miliseconds
+        self.wraplength = 180   # pixels
+        self.widget = widget
+        self.text = text
+        self.widget.bind("<Enter>", self.enter)
+        self.widget.bind("<Leave>", self.leave)
+        self.widget.bind("<ButtonPress>", self.leave)
+        self.timer_id = None
+        self.toplevel_window = None
+
+    def enter(self, event=None):
+        self.schedule()
+
+    def leave(self, event=None):
+        self.unschedule()
+        self.hide_tooltip()
+
+    def schedule(self):
+        self.unschedule()
+        self.timer_id = self.widget.after(self.showup_delay, self.show_tooltip)
+
+    def unschedule(self):
+        timer_id = self.timer_id
+        self.timer_id = None
+        if timer_id:
+            self.widget.after_cancel(timer_id)
+
+    def show_tooltip(self, event=None):
+        x = y = 0
+        x, y, cx, cy = self.widget.bbox()
+        x += self.widget.winfo_rootx() + 25
+        y += self.widget.winfo_rooty() + 20
+        # creates a toplevel window
+        self.toplevel_window = tk.Toplevel(self.widget)
+        # Leaves only the label and removes the app window
+        self.toplevel_window.wm_overrideredirect(True)
+        self.toplevel_window.wm_geometry("+%d+%d" % (x, y))
+        label = tk.Label(self.toplevel_window, text=self.text, justify='left',
+                         background="#ffffdf", relief='solid', borderwidth=1,
+                         wraplength=self.wraplength)
+        label.pack(ipadx=1)
+
+    def hide_tooltip(self):
+        toplevel_window = self.toplevel_window
+        self.toplevel_window= None
+        if toplevel_window:
+            toplevel_window.destroy()
+
+
 class Application(tk.Frame):
     def __init__(self, master=None):
         super().__init__(master)
@@ -133,15 +201,19 @@ class Application(tk.Frame):
 
         self.target_ratio = create_input(self, _('Target ratio (%)'), validate_percent)
         self.target_ratio.entry.insert(0, '20')
+        CreateTooltip(self.target_ratio, _(TOOLTIP_TARGET_RATIO))
 
         self.target_img = create_input(self, _('Target image'), None, 50)
         self.target_img.entry.bind('<Button-1>', self.cb_choose_target_img)
+        CreateTooltip(self.target_img, _(TOOLTIP_TARGET_IMG))
 
         self.src_img_dir = create_input(self, _('Image directory'), None, 50)
         self.src_img_dir.entry.bind('<Button-1>', self.cb_choose_img_src_dir)
         self.src_img_dir.entry.insert(0, 'letters')
+        CreateTooltip(self.src_img_dir, _(TOOLTIP_IMG_DIR))
 
         self.instruction = create_input(self, _('Instruction'), None, 50)
+        CreateTooltip(self.instruction, _(TOOLTIP_INSTRUCTION))
 
         # add a separation
         tk.Frame(self, height=30).pack(side='top')
