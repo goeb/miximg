@@ -4,6 +4,7 @@ import os
 import sys
 import locale
 import subprocess
+import platform
 import tkinter as tk
 import tkinter.filedialog
 
@@ -34,8 +35,22 @@ TEXT = { 'fr':
          'Generate PDF':'Générer un PDF',
          'Exit':'Quitter',
          'cancelled':'annulé',
+         'Choose a file name for the generated PDF':'Choisissez un nom de fichier pour le PDF',
+         'ok':'ok',
+         'error':'erreur',
          '':''}
        }
+
+
+def open_file_with_default_application(filepath):
+    system = platform.system()
+    if system == 'Darwin': # macOS
+        subprocess.call(['open', filepath])
+    elif system == 'Windows':
+        os.startfile(filepath)
+    else: # Linux variants
+        subprocess.call(['xdg-open', filepath])
+
 
 def create_choice(parent, label_text, selected, *values):
     """Create a Frame with a label and an OptionMenu
@@ -108,16 +123,19 @@ class Application(tk.Frame):
 
         self.num_pages = create_input(self, _('Number of pages'), validate_page_num)
         self.num_pages.pack(side='top')
+        self.num_pages.entry.insert(0, '1')
 
         self.img_layout = create_choice(self, _('Image layout'), _('grid'),
                                        _('grid'), _('random'))
         self.img_layout.pack(side="top")
 
-        self.img_per_page = create_input(self, _('Images per page'), validate_page_num)
-        self.img_per_page.pack(side='top')
+        self.images_per_page = create_input(self, _('Images per page'), validate_page_num)
+        self.images_per_page.pack(side='top')
+        self.images_per_page.entry.insert(0, '36')
 
         self.target_ratio = create_input(self, _('Target ratio (%)'), validate_percent)
         self.target_ratio.pack(side='top')
+        self.target_ratio.entry.insert(0, '20')
 
         self.target_img = create_input(self, _('Target image'), None)
         self.target_img.entry.bind('<Button-1>', self.cb_choose_target_img)
@@ -126,6 +144,7 @@ class Application(tk.Frame):
         self.src_img_dir = create_input(self, _('Image directory'), None)
         self.src_img_dir.entry.bind('<Button-1>', self.cb_choose_img_src_dir)
         self.src_img_dir.pack(side='top')
+        self.src_img_dir.entry.insert(0, 'letters')
 
         self.instruction = create_input(self, _('Instruction'), None)
         self.instruction.pack(side="top")
@@ -137,6 +156,7 @@ class Application(tk.Frame):
         self.button_gen_pdf = tk.Button(self.frame_buttons, text=_('Generate PDF'),
                                         command=self.generate_pdf)
         self.button_gen_pdf.pack(side='left')
+        self.master.bind('<Return>', self.generate_pdf)
         
         self.button_exit = tk.Button(self.frame_buttons, text=_('Exit'), command=self.exit)
         self.button_exit.pack(side='left')
@@ -171,7 +191,7 @@ class Application(tk.Frame):
     def collect_miximg_args(self):
         args = ['./miximg']
         args.append('--images-per-page')
-        args.append(self.img_per_page.entry.get())
+        args.append(self.images_per_page.entry.get())
         args.append('--page-format')
         args.append(self.page_format.value.get())
         args.append('--page-orientation')
@@ -190,21 +210,26 @@ class Application(tk.Frame):
         if self.instruction.entry.get():
             args.append('--text')
             args.append(self.instruction.entry.get())
+        args.append(self.src_img_dir.entry.get())
 
         return args
 
 
-    def generate_pdf(self):
+    def generate_pdf(self, event=None):
         # ask for output file
-        output = tk.filedialog.askopenfilename()
-        if not output:
+        pdf_filepath = tk.filedialog.asksaveasfilename(filetypes=(('PDF', '*.pdf'),),
+                                                 title=_('Choose a file name for the generated PDF'))
+        if not pdf_filepath:
             self.console.insert(tk.END, _('cancelled')+'\n')
             return
+
+        if pdf_filepath[-4:] != '.pdf':
+            pdf_filepath += '.pdf'
 
         # run the 'miximg' program
         args = self.collect_miximg_args()
         args.append('--output')
-        args.append(output)
+        args.append(pdf_filepath)
 
         self.console.insert(tk.END, ' '.join(args) + '\n')
         self.console.update()
@@ -213,6 +238,17 @@ class Application(tk.Frame):
         # display the result in the console
         self.console.insert(tk.END, p.stdout)
         self.console.insert(tk.END, p.stderr)
+
+        if p.returncode == 0:
+            result = _('ok')
+        else:
+            result = _('error')
+
+        self.console.insert(tk.END, result+'\n')
+
+        if p.returncode == 0:
+            self.console.insert(tk.END, 'Opening PDF...')
+            open_file_with_default_application(pdf_filepath)
 
 
 def main():
