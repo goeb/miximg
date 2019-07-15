@@ -51,18 +51,20 @@ def open_file_with_default_application(filepath):
     else: # Linux variants
         subprocess.call(['xdg-open', filepath])
 
+WIDTH_LABEL = '20'
 
 def create_choice(parent, label_text, selected, *values):
     """Create a Frame with a label and an OptionMenu
     """
     frame = tk.Frame(parent)
     label_text += ':'
-    label = tk.Label(frame, text=label_text)
+    label = tk.Label(frame, text=label_text, width=WIDTH_LABEL, anchor=tk.E)
     label.pack(side='left')
     frame.value = tk.StringVar()
     frame.value.set(selected)
     frame.option_menu = tk.OptionMenu(frame, frame.value, *values)
     frame.option_menu.pack(side='left')
+    frame.pack(side='top', anchor=tk.W)
     return frame
 
 
@@ -85,19 +87,21 @@ def validate_page_num(text):
         return False
 
 
-def create_input(parent, label_text, validate_func):
+def create_input(parent, label_text, validate_func=None, size=5):
     """Create a Frame with a label and an OptionMenu
     """
     frame = tk.Frame(parent)
     label_text += ':'
-    label = tk.Label(frame, text=label_text)
+    label = tk.Label(frame, text=label_text, width=WIDTH_LABEL, anchor=tk.E)
     label.pack(side='left')
-    frame.entry = tk.Entry(frame)
+    frame.entry = tk.Entry(frame, width=size)
     frame.entry.pack(side='left')
     if validate_func:
         cmd = frame.entry.register(validate_func)
         frame.entry.config(validate='key')
         frame.entry.config(validatecommand=(cmd, '%P'))
+
+    frame.pack(side='top', anchor=tk.W)
         
     return frame
 
@@ -111,60 +115,59 @@ class Application(tk.Frame):
 
 
     def create_widgets(self):
-        self.title = tk.Label(self, text="Miximgigui", font=("Helvetica","14"))
-        self.title.pack(side="top")
 
         self.page_orientation = create_choice(self, _('Page orientation'), _('portrait'),
                                               _('portrait'), _('landscape'))
         self.page_orientation.pack(side="top")
 
         self.page_format = create_choice(self, _('Page format'), 'A4', 'A4', 'A3')
-        self.page_format.pack(side="top")
 
         self.num_pages = create_input(self, _('Number of pages'), validate_page_num)
-        self.num_pages.pack(side='top')
         self.num_pages.entry.insert(0, '1')
 
         self.img_layout = create_choice(self, _('Image layout'), _('grid'),
                                        _('grid'), _('random'))
-        self.img_layout.pack(side="top")
 
         self.images_per_page = create_input(self, _('Images per page'), validate_page_num)
-        self.images_per_page.pack(side='top')
         self.images_per_page.entry.insert(0, '36')
 
         self.target_ratio = create_input(self, _('Target ratio (%)'), validate_percent)
-        self.target_ratio.pack(side='top')
         self.target_ratio.entry.insert(0, '20')
 
-        self.target_img = create_input(self, _('Target image'), None)
+        self.target_img = create_input(self, _('Target image'), None, 50)
         self.target_img.entry.bind('<Button-1>', self.cb_choose_target_img)
-        self.target_img.pack(side='top')
 
-        self.src_img_dir = create_input(self, _('Image directory'), None)
+        self.src_img_dir = create_input(self, _('Image directory'), None, 50)
         self.src_img_dir.entry.bind('<Button-1>', self.cb_choose_img_src_dir)
-        self.src_img_dir.pack(side='top')
         self.src_img_dir.entry.insert(0, 'letters')
 
-        self.instruction = create_input(self, _('Instruction'), None)
-        self.instruction.pack(side="top")
+        self.instruction = create_input(self, _('Instruction'), None, 50)
 
+        # add a separation
+        tk.Frame(self, height=30).pack(side='top')
 
         # Buttons
         self.frame_buttons = tk.Frame(self)
-        self.frame_buttons.pack()
+        self.frame_buttons.pack(side='top', anchor=tk.E, padx=15)
+
         self.button_gen_pdf = tk.Button(self.frame_buttons, text=_('Generate PDF'),
                                         command=self.generate_pdf)
         self.button_gen_pdf.pack(side='left')
-        self.master.bind('<Return>', self.generate_pdf)
+
+        self.button_gen_pdf = tk.Button(self.frame_buttons, text=_('Generate PDF and open'),
+                                        command=self.generate_pdf_and_open)
+        self.button_gen_pdf.pack(side='left')
         
         self.button_exit = tk.Button(self.frame_buttons, text=_('Exit'), command=self.exit)
         self.button_exit.pack(side='left')
         self.master.bind('<Control-q>', self.exit)
 
+        # add a separation
+        tk.Frame(self, height=15).pack(side='top')
+
         # Messages
         self.console = tk.Text(self)
-        self.console.pack(side="top")
+        self.console.pack(side="top", fill=tk.BOTH, expand=1)
 
 
 
@@ -189,7 +192,7 @@ class Application(tk.Frame):
 
 
     def collect_miximg_args(self):
-        args = ['./miximg']
+        args = [get_miximg_exe()]
         args.append('--images-per-page')
         args.append(self.images_per_page.entry.get())
         args.append('--page-format')
@@ -213,6 +216,13 @@ class Application(tk.Frame):
         args.append(self.src_img_dir.entry.get())
 
         return args
+
+
+    def generate_pdf_and_open(self, event=None):
+        (returncode, pdf_filepath) = self.generate_pdf(event)
+        if returncode == 0:
+            self.console.insert(tk.END, 'Opening PDF...')
+            open_file_with_default_application(pdf_filepath)
 
 
     def generate_pdf(self, event=None):
@@ -246,13 +256,22 @@ class Application(tk.Frame):
 
         self.console.insert(tk.END, result+'\n')
 
-        if p.returncode == 0:
-            self.console.insert(tk.END, 'Opening PDF...')
-            open_file_with_default_application(pdf_filepath)
+        return p.returncode, pdf_filepath
+
+
+def get_miximg_exe():
+    return './miximg'
+
+
+def get_version():
+    p = subprocess.run([get_miximg_exe(), '-V'], stdout=subprocess.PIPE)
+    return p.stdout
 
 
 def main():
     root = tk.Tk()
+    miximg_version = get_version()
+    root.title(miximg_version)
     app = Application(master=root)
     app.mainloop()
 
