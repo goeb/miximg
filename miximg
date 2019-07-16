@@ -8,7 +8,7 @@ import fpdf
 import PIL
 import math
 
-VERSION = '1.0'
+VERSION = '1.1'
  
 # page layout
 # +---------------------------------+
