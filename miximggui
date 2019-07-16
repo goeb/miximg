@@ -38,12 +38,14 @@ TEXT = { 'fr':
          'Number of pages':'Nombre de pages',
          'Image layout':'Placement des images',
          'grid':'grille',
-         'random':'aléatoire',
+         'not aligned':'non aligné',
          'Images per page':'Images par page',
          'Image directory':'Répertoire d\'images',
          'Target ratio (%)':'Ratio de la cible (%)',
+         'Target image':'Image cible',
          'Instruction':'Consigne',
          'Generate PDF':'Générer un PDF',
+         'Generate PDF and open':'Générer un PDF et l\'ouvrir',
          'Exit':'Quitter',
          'cancelled':'annulé',
          'Choose a file name for the generated PDF':'Choisissez un nom de fichier pour le PDF',
@@ -194,7 +196,7 @@ class Application(tk.Frame):
         self.num_pages.entry.insert(0, '1')
 
         self.img_layout = create_choice(self, _('Image layout'), _('grid'),
-                                       _('grid'), _('random'))
+                                       _('grid'), _('not aligned'))
 
         self.images_per_page = create_input(self, _('Images per page'), validate_page_num)
         self.images_per_page.entry.insert(0, '36')
@@ -275,7 +277,12 @@ class Application(tk.Frame):
             args.append('--pages')
             args.append(self.num_pages.entry.get())
         args.append('--layout')
-        args.append(self.img_layout.value.get())
+        img_layout = self.img_layout.value.get()
+        if img_layout == _('grid'):
+            args.append('grid')
+        else:
+            args.append('random')
+               
         if self.target_ratio.entry.get():
             args.append('--target-ratio')
             args.append(self.target_ratio.entry.get())
