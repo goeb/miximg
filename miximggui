@@ -266,7 +266,7 @@ class Application(tk.Frame):
 
 
     def collect_miximg_args(self):
-        args = [get_miximg_exe()]
+        args = get_miximg_exe()
         args.append('--images-per-page')
         args.append(self.images_per_page.entry.get())
         args.append('--page-format')
@@ -339,11 +339,18 @@ class Application(tk.Frame):
 
 
 def get_miximg_exe():
-    return './miximg'
+    """Return the location of miximg, prefixed by 'python3'.
+
+    miximg is searched in the same directory as miximggui.
+    """
+    gui_dir = os.path.dirname(sys.argv[0])
+    miximg = os.path.join(gui_dir, 'miximg')
+    return ['python3', miximg]
 
 
 def get_version():
-    p = subprocess.run([get_miximg_exe(), '-V'], stdout=subprocess.PIPE)
+    args = get_miximg_exe() + ['-V']
+    p = subprocess.run(args, stdout=subprocess.PIPE)
     return p.stdout
 
 
