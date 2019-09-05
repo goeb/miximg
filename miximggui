@@ -339,13 +339,13 @@ class Application(tk.Frame):
 
 
 def get_miximg_exe():
-    """Return the location of miximg, prefixed by 'python3'.
+    """Return the location of miximg, prefixed by 'python'.
 
     miximg is searched in the same directory as miximggui.
     """
     gui_dir = os.path.dirname(sys.argv[0])
     miximg = os.path.join(gui_dir, 'miximg')
-    return ['python3', miximg]
+    return ['python', miximg]
 
 
 def get_version():
