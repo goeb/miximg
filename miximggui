@@ -86,6 +86,11 @@ def create_choice(parent, label_text, selected, *values):
 
 
 def validate_percent(text):
+    """Prevent typing other characters than digits or numbers greater than 100
+    
+    Allow the user to erase all characters.
+    """
+    if text == '': return True
     try:
         v = int(text)
         if v < 0: return False
@@ -96,15 +101,27 @@ def validate_percent(text):
 
 
 def validate_page_num(text):
+    """Prevent typing other characters than digits
+    
+    Allow the user to erase all characters.
+    """
+    if text == '': return True
     try:
         v = int(text)
-        if v <= 0: return False
+        if v < 0: return False
         return True
     except:
         return False
 
 
-def create_input(parent, label_text, validate_func=None, size=5):
+def entry_set_default_value_if_empty(event):
+    """Rrestore default value, if empty"""
+    if event.widget.get() == '':
+        event.widget.delete(0, tk.END)
+        event.widget.insert(0, event.widget.default_value)
+
+
+def create_input(parent, label_text, validate_func=None, size=5, default=None):
     """Create a Frame with a label and an OptionMenu
     """
     frame = tk.Frame(parent)
@@ -117,6 +134,11 @@ def create_input(parent, label_text, validate_func=None, size=5):
         cmd = frame.entry.register(validate_func)
         frame.entry.config(validate='key')
         frame.entry.config(validatecommand=(cmd, '%P'))
+
+    if default:
+        frame.entry.insert(0, default)
+        frame.entry.default_value = default
+        frame.entry.bind("<FocusOut>", entry_set_default_value_if_empty)
 
     frame.pack(side='top', anchor=tk.W)
         
@@ -192,29 +214,26 @@ class Application(tk.Frame):
 
         self.page_format = create_choice(self, _('Page format'), 'A4', 'A4', 'A3')
 
-        self.num_pages = create_input(self, _('Number of pages'), validate_page_num)
-        self.num_pages.entry.insert(0, '1')
+        self.num_pages = create_input(self, _('Number of pages'), validate_page_num, default='1')
 
         self.img_layout = create_choice(self, _('Image layout'), _('grid'),
                                        _('grid'), _('not aligned'))
 
-        self.images_per_page = create_input(self, _('Images per page'), validate_page_num)
-        self.images_per_page.entry.insert(0, '36')
+        self.images_per_page = create_input(self, _('Images per page'), validate_page_num, default='36')
 
-        self.target_ratio = create_input(self, _('Target ratio (%)'), validate_percent)
-        self.target_ratio.entry.insert(0, '20')
+        self.target_ratio = create_input(self, _('Target ratio (%)'), validate_percent, default='20')
         CreateTooltip(self.target_ratio, _(TOOLTIP_TARGET_RATIO))
 
-        self.target_img = create_input(self, _('Target image'), None, 50)
+        self.target_img = create_input(self, _('Target image'), size=50)
         self.target_img.entry.bind('<Button-1>', self.cb_choose_target_img)
         CreateTooltip(self.target_img, _(TOOLTIP_TARGET_IMG))
 
-        self.src_img_dir = create_input(self, _('Image directory'), None, 50)
+        self.src_img_dir = create_input(self, _('Image directory'), size=50)
         self.src_img_dir.entry.bind('<Button-1>', self.cb_choose_img_src_dir)
         self.src_img_dir.entry.insert(0, 'letters')
         CreateTooltip(self.src_img_dir, _(TOOLTIP_IMG_DIR))
 
-        self.instruction = create_input(self, _('Instruction'), None, 50)
+        self.instruction = create_input(self, _('Instruction'), size=50)
         CreateTooltip(self.instruction, _(TOOLTIP_INSTRUCTION))
 
         # add a separation
