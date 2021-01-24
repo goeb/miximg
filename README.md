@@ -26,9 +26,13 @@ Usage example (command line):
 
 
 
-# Screenshot
+# Screenshots
+
+## Miximg GUI
 
 ![Screenshot of miximg v1.2](screenshots/screenshot_miximggui_1.2.png)
+
+## Example of generated PDF
 
 ![Screenshot of cross_out.pdf](screenshots/screenshot_cross_out.png)
 
