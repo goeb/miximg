@@ -323,7 +323,7 @@ class Application(tk.Frame):
     def generate_pdf_and_open(self, event=None):
         (returncode, pdf_filepath) = self.generate_pdf(event)
         if returncode == 0:
-            self.console.insert(tk.END, 'Opening PDF...')
+            self.console.insert(tk.END, 'Opening PDF...\n')
             open_file_with_default_application(pdf_filepath)
 
 
