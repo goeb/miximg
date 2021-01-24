@@ -28,7 +28,7 @@ Usage example (command line):
 
 # Screenshot
 
-![Screenshot of miximg v1.2](master/screenshots/screenshot_miximggui_1.2.png?raw=true)
+![Screenshot of miximg v1.2](screenshots/screenshot_miximggui_1.2.png)
 
-![Screenshot of cross_out.pdf](master/screenshots/screenshot_cross_out.png?raw=true)
+![Screenshot of cross_out.pdf](screenshots/screenshot_cross_out.png)
 
