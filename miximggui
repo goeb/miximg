@@ -291,7 +291,11 @@ class Application(tk.Frame):
         args.append('--page-format')
         args.append(self.page_format.value.get())
         args.append('--page-orientation')
-        args.append(self.page_orientation.value.get())
+        page_orientation = self.page_orientation.value.get()
+        if page_orientation == _('portrait'):
+            args.append('portrait')
+        else:
+            args.append('landscape')
         if self.num_pages.entry.get():
             args.append('--pages')
             args.append(self.num_pages.entry.get())
